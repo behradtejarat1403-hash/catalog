@@ -49,6 +49,9 @@ button,input,select,textarea{font-family:inherit;font-size:inherit}
 .iconbtn:hover{background:rgba(255,255,255,.24)}
 .iconbtn.spin svg{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(-360deg)}}
+.updbar{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:#E3F4EA;color:#0B5A33;padding:9px 16px;font-weight:700;justify-content:center;text-align:center}
+.updbar a{background:var(--ok);color:#fff;text-decoration:none;border-radius:10px;padding:6px 14px}
+.updbar button{border:0;background:none;color:#0B5A33;text-decoration:underline;cursor:pointer;font-family:inherit}
 .stale{background:var(--ask-bg);color:var(--ask);padding:8px 22px;font-weight:700;display:none;text-align:center}
 .wrap{display:flex;gap:20px;padding:20px 22px;align-items:flex-start}
 aside{width:230px;flex:none;position:sticky;top:86px;max-height:calc(100vh - 100px);overflow:auto;background:var(--card);border-radius:16px;padding:14px;border:1px solid var(--line)}
@@ -264,6 +267,7 @@ input,select,textarea{font-size:16px!important} /* iPhone zooms into smaller inp
   <div class="menu" id="menu"></div>
 </header>
 <div class="stale" id="stale"></div>
+<div class="updbar" id="updbar"></div>
 <div class="wrap">
   <aside>
     <h4>دسته‌بندی</h4>
@@ -746,7 +750,17 @@ function prepare(d) {
   d.products.sort((a, b) => (b._sale - a._sale) || (order[a._state] - order[b._state]));
   return d;
 }
+// a newer Android app is published (catalog.json «app.android», written by android/build.py): offer it once per run
+let UPD_LATER = 0;
+function showUpdate() {
+  const b = window.APP_BUILD, latest = b && DATA && DATA.app && DATA.app[b.platform], el = $("#updbar");
+  if (!latest || !latest.code || !latest.url || latest.code <= b.code || UPD_LATER === latest.code) { el.style.display = "none"; return; }
+  el.innerHTML = `🔔 نسخه جدید برنامه آماده است <a href="${esc(latest.url)}">دریافت و نصب</a><button type="button" id="updx">بعداً</button>`;
+  el.style.display = "flex";
+  $("#updx").onclick = () => { UPD_LATER = latest.code; el.style.display = "none"; };
+}
 function showMeta() {
+  showUpdate();
   $("#day").textContent = DATA.date ? fa(DATA.date) : "—";
   if (DATA.company) $("#company").textContent = DATA.company;
   const u = (META.fetched || DATA.updated || "").slice(11, 16);
