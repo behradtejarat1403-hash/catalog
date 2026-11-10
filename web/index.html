@@ -175,6 +175,7 @@ main{flex:1;min-width:0}
 .req .st{float:left;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px}
 .st.sent{background:var(--ok-bg);color:var(--ok)}.st.queued{background:var(--ask-bg);color:var(--ask)}
 .req small{color:var(--muted)}
+.invbtn{margin-top:6px;border:1px solid var(--navy);background:var(--navy-soft);color:var(--navy);border-radius:9px;padding:5px 12px;font-weight:700;cursor:pointer}
 .menu{position:absolute;top:58px;left:22px;background:#fff;border-radius:12px;box-shadow:0 10px 30px rgba(1,37,78,.2);min-width:220px;display:none;z-index:8;overflow:hidden}
 .menu.open{display:block}
 .menu .who{padding:12px 14px;border-bottom:1px solid var(--line);color:var(--ink);line-height:1.7}
@@ -438,7 +439,10 @@ function fitText(ctx, text, max, size, weight) {
 let CARD_NAME = "card.png";
 async function makeCard(p) {
   await Promise.all([700, 800, 500].map(w => document.fonts.load(`${w} 40px Vazirmatn`, "آب")));
-  const cv = $("#cv"), ctx = cv.getContext("2d"), W = 1080, H = 1350;
+  const cv = $("#cv"), W = 1080, H = 1350;
+  cv.width = W; cv.height = H;  // the proforma uses the same canvas at another size
+  $("#saveCard").textContent = "ذخیره عکس کارت";
+  const ctx = cv.getContext("2d");
   ctx.direction = "rtl"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
   // header
@@ -604,17 +608,117 @@ function openRequest(p, type) {
     if (!r.ok) { err.textContent = r.error || "ثبت نشد."; return; }
     closeDlg();
     toast(r.status === "sent" ? "واتساپ باز شد؛ پیام را «ارسال» کنید" : "ثبت شد؛ با وصل شدن اینترنت خودکار ارسال می‌شود");
+    if (type === "order") {  // the customer's proforma, right after the order (owner, 2026-11-10)
+      try { const mine = (await api("/api/requests")).requests || []; if (mine[0] && mine[0].type === "order") await makeInvoice(mine[0]); } catch (e) { /* the order itself is placed */ }
+    }
   };
 }
 async function openMine() {
   const r = await api("/api/requests");
   const label = {order: "درخواست سفارش", offer: "پیشنهاد قیمت"};
-  const rows = (r.requests || []).map(x => `<div class="req"><span class="st ${x.status}">${x.status === "sent" ? "واتساپ" : "ارسال نشد"}</span>
+  const list = r.requests || [];
+  const rows = list.map((x, i) => `<div class="req"><span class="st ${x.status}">${x.status === "sent" ? "واتساپ" : "ارسال نشد"}</span>
     <b>${label[x.type] || ""}</b> · ${esc(x.title)}${x.color ? " · " + esc(x.color) : ""}<br>
-    <small>تعداد ${fa(x.qty)}${x.offered ? ` · پیشنهاد ${money(x.offered)} ${esc(DATA.unit)}` : ""} · ${fa(x.when || "")}</small>
-    ${x.note ? `<br><small>${esc(x.note)}</small>` : ""}</div>`).join("");
+    <small>تعداد ${fa(x.qty)}${x.offered ? ` · پیشنهاد ${money(toman(x.offered))} تومان` : ""} · ${fa(x.when || "")}</small>
+    ${x.note ? `<br><small>${esc(x.note)}</small>` : ""}
+    ${x.type === "order" ? `<br><button class="invbtn" data-inv="${i}">🧾 پیش‌فاکتور</button>` : ""}</div>`).join("");
   dlg(`<h2>درخواست‌های من</h2><div class="hint">درخواست‌هایی که از این دستگاه فرستاده‌اید. نتیجه را کارشناسان تلفنی به شما اطلاع می‌دهند.</div>
     ${rows || `<div class="nodata">هنوز درخواستی نفرستاده‌اید.</div>`}`);
+  document.querySelectorAll("#dbox [data-inv]").forEach(b => b.onclick = () => { closeDlg(); makeInvoice(list[+b.dataset.inv]); });
+}
+
+/* ---------------- proforma invoice (پیش‌فاکتور), in the layout of the owner's sample (2026-11-10) ---------------- */
+// prices were in thousand toman until 2026-11-10: a number under a million is in thousands
+const toman = v => { v = Number(v) || 0; return v >= 1e6 ? v : v * 1000; };
+function inWords(n) {
+  n = Math.round(Number(n) || 0);
+  if (!n) return "صفر";
+  const ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
+  const teens = ["ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده"];
+  const tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
+  const hundreds = ["", "صد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"];
+  const three = x => {
+    const out = [], h = Math.floor(x / 100), r = x % 100;
+    if (h) out.push(hundreds[h]);
+    if (r >= 10 && r < 20) out.push(teens[r - 10]);
+    else { if (Math.floor(r / 10)) out.push(tens[Math.floor(r / 10)]); if (r % 10) out.push(ones[r % 10]); }
+    return out.join(" و ");
+  };
+  const scales = ["", "هزار", "میلیون", "میلیارد", "هزار میلیارد"];
+  const parts = [];
+  for (let i = 0; n > 0; i++, n = Math.floor(n / 1000)) if (n % 1000) parts.unshift(three(n % 1000) + (scales[i] ? " " + scales[i] : ""));
+  return parts.join(" و ");
+}
+async function makeInvoice(r) {
+  if (!r) return;
+  // both halves of the font: Persian and Latin («BC-068C18AF»), else the number is drawn in a fallback serif
+  await Promise.all([500, 700, 800].flatMap(w => [document.fonts.load(`${w} 30px Vazirmatn`, "آب"), document.fonts.load(`${w} 30px Vazirmatn`, "BC-1")]));
+  const S = DATA.seller || {}, c = r.customer || {};
+  const cv = $("#cv"), W = 1600, H = 1066, M = 40;
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext("2d");
+  ctx.direction = "rtl"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, W, H);
+  const NAVY = "#01254E", INK = "#0F1B2D", LINE = "#1d2a3a", BAND = "#E8EEF6";
+  const txt = (s, x, y, o = {}) => { ctx.font = `${o.w || 500} ${o.s || 22}px Vazirmatn`; ctx.fillStyle = o.c || INK; ctx.textAlign = o.a || "right"; ctx.fillText(String(s ?? ""), x, y); };
+  const rect = (x, y, w, h, fill) => { if (fill) { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); } ctx.strokeStyle = LINE; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h); };
+  const band = (label, y) => { rect(M, y, W - 2 * M, 42, BAND); txt(label, W / 2, y + 22, {w: 700, a: "center"}); };
+  const field = (label, value, x, y, valueW) => { txt(label + ":", x, y, {w: 700}); ctx.font = "700 22px Vazirmatn"; const lw = ctx.measureText(label + ":").width; txt(value || "", x - lw - 14, y, {w: 500}); };
+  const day = String(r.when || "").split(" ")[0] || META.today || "";
+  const qty = Number(r.qty) || 0, unit = r.list_price ? toman(r.list_price) : 0, total = unit * qty;
+
+  // header: logo right, title centre, number and dates left
+  const logo = await loadImg("/logo-navy.png") || await loadImg("logo-navy.png");
+  if (logo) { const h = 110, w = logo.width * h / logo.height; ctx.drawImage(logo, W - M - w, 30, w, h); }
+  txt("پیش فاکتور فروش کالا و خدمات", W / 2, 85, {s: 44, w: 800, a: "center", c: NAVY});
+  txt(`شماره: ${r.id || ""}`, 420, 50, {s: 21}); txt(`تاریخ: ${fa(day)}`, 420, 85, {s: 21}); txt(`تاریخ اعتبار: ${fa(day)}`, 420, 120, {s: 21});
+
+  // seller
+  let y = 160; band("مشخصات فروشنده", y); y += 42; rect(M, y, W - 2 * M, 140);
+  const c1 = W - M - 20, c2 = W * 0.6, c3 = W * 0.3;
+  field("نام فروشنده", S.name || DATA.company, c1, y + 28); field("شماره اقتصادی", S.economic_no, c2, y + 28); field("شماره ثبت / شماره ملی", S.register_no, c3, y + 28);
+  field("شناسه ملی", S.national_id, c1, y + 70); field("کد پستی", S.postal_code, c2, y + 70); field("فکس", S.fax, c3, y + 70);
+  field("نشانی", S.address, c1, y + 112); field("تلفن", S.phone, c3, y + 112);
+  // buyer
+  y += 140; band("مشخصات خریدار", y); y += 42; rect(M, y, W - 2 * M, 100);
+  field("نام خریدار", `${c.name || ""}${c.shop ? " (" + c.shop + ")" : ""}`, c1, y + 30); field("تلفن", fa(c.mobile || ""), c3, y + 30);
+  field("نشانی", c.city || "", c1, y + 72);
+  // items
+  y += 100; band("مشخصات کالا یا خدمات مورد معامله", y); y += 42;
+  const cols = [["ردیف", 80], ["شرح کالا / خدمت", 0], ["تعداد / مقدار", 150], ["واحد", 110], ["مبلغ واحد (تومان)", 250], ["مبلغ کل (تومان)", 270]];
+  const fixed = cols.reduce((a, cc) => a + cc[1], 0); cols[1][1] = W - 2 * M - fixed;
+  let x = W - M; const xs = [];
+  for (const [label, w] of cols) { rect(x - w, y, w, 52, BAND); txt(label, x - w / 2, y + 27, {w: 700, a: "center", s: 20}); xs.push([x, w]); x -= w; }
+  y += 52;
+  const title = r.title + (r.color ? ` | رنگ ${r.color}` : "");
+  const cells = [fa(1), title, fa(qty), "عدد", unit ? money(unit) : "استعلام", unit ? money(total) : "—"];
+  xs.forEach(([cx, w], i) => { rect(cx - w, y, w, 58); txt(cells[i], i === 1 ? cx - 14 : cx - w / 2, y + 30, {a: i === 1 ? "right" : "center", s: i === 1 ? 21 : 22, w: i >= 4 ? 700 : 500}); });
+  y += 58;
+  // totals (left, under «مبلغ کل»), amount in words and terms (right)
+  const vw = 270, lw2 = 250, tx = M + vw + lw2;
+  [["جمع کل", unit ? money(total) : "—"], ["اضافات", ""], ["تخفیف", ""], ["مالیات و عوارض", ""], ["مبلغ پرداختی", unit ? money(total) : "—"]].forEach(([l, v], i) => {
+    const yy = y + i * 46; rect(M + vw, yy, lw2, 46, i === 4 ? BAND : null); rect(M, yy, vw, 46, i === 4 ? BAND : null);
+    txt(l, tx - 14, yy + 24, {w: 700, s: 21}); txt(v, M + vw / 2, yy + 24, {w: 800, a: "center", s: 22, c: i === 4 ? NAVY : INK});
+  });
+  rect(tx, y, W - M - tx, 230);
+  txt("مبلغ به حروف:", W - M - 20, y + 40, {w: 700});
+  ctx.font = "700 24px Vazirmatn"; const words = unit ? `${inWords(total)} تومان` : "پس از استعلام قیمت";
+  txt(words, W - M - 190, y + 40, {w: 700, c: NAVY, s: words.length > 60 ? 19 : 22});
+  txt("شرایط و نحوه فروش:", W - M - 20, y + 110, {w: 700});
+  ctx.lineWidth = 2; ctx.strokeStyle = LINE;
+  txt("نقدی", W - M - 300, y + 110); ctx.strokeRect(W - M - 380, y + 94, 32, 32);
+  txt("غیر نقدی", W - M - 480, y + 110); ctx.strokeRect(W - M - 600, y + 94, 32, 32);
+  txt("قیمت‌ها بر اساس لیست روز بهراد تجارت است.", W - M - 20, y + 175, {s: 19, c: "#5B6B80"});
+  // notes and signatures
+  y += 230; rect(M, y, W - 2 * M, 80);
+  txt("توضیحات:", W - M - 20, y + 26, {w: 700});
+  txt(`${r.note ? r.note + " — " : ""}این پیش‌فاکتور از کاتالوگ صادر شده و پس از تأیید موجودی و قیمت توسط کارشناسان بهراد تجارت قطعی می‌شود.`, W - M - 150, y + 26, {s: 19});
+  txt(`${DATA.contact || ""}`, W - M - 20, y + 60, {s: 19, c: NAVY, w: 700});
+  y += 80; rect(M, y, (W - 2 * M) / 2, 80); rect(W / 2, y, (W - 2 * M) / 2, 80);
+  txt("مهر و امضای فروشنده", W - M - 20, y + 26, {w: 700}); txt("مهر و امضای خریدار", W / 2 - 20, y + 26, {w: 700});
+  CARD_NAME = `پیش-فاکتور-${r.id || ""}.png`;
+  $("#saveCard").textContent = "ذخیره پیش‌فاکتور";
+  $("#cardprev").classList.add("open");
 }
 function toggleMenu() {
   if (!ACCOUNT) { openAuth("login"); return; }
