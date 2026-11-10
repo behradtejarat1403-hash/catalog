@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>دانلود اپ کاتالوگ بهراد تجارت</title>
+<link rel="apple-touch-icon" href="../web/apple-touch-icon.png">
 <meta name="description" content="برنامه اندروید کاتالوگ بهراد تجارت: قیمت روز همکاران، موجودی و فروش ویژه">
 <meta name="theme-color" content="#01254E">
 <link rel="icon" href="logo.png">
@@ -39,6 +40,10 @@ ol{margin:0;padding:0;list-style:none;counter-reset:s}
 ol li{counter-increment:s;background:#fff;border:1px solid var(--line);border-radius:14px;padding:11px 14px 11px 12px;margin-bottom:8px;display:flex;gap:12px;align-items:flex-start}
 ol li:before{content:counter(s,persian);flex:none;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;margin-top:1px}
 .note{background:#FFF4D6;color:#7A5200;border-radius:14px;padding:12px 14px;font-size:13.5px}
+.ios{display:none}.is-ios .ios{display:block}.is-ios .android{display:none}
+.dl.web{background:var(--navy);color:#fff}
+.or{text-align:center;color:var(--muted);font-size:13px;margin:12px 0 0}.or a{color:var(--navy-2);font-weight:800}
+.share{display:inline-block;vertical-align:-4px}
 footer{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
 </style>
 </head>
@@ -49,13 +54,22 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
   <p>قیمت روز همکاران، موجودی و فروش ویژه؛ همیشه روی گوشی شما</p>
 </header>
 <main>
-  <div class="card">
+  <div class="card ios">
+    <a class="dl web" href="../web/">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.5" width="12" height="19" rx="3"/><path d="M11 18.5h2"/></svg>
+      باز کردن نسخه آیفون
+    </a>
+    <div class="meta">آیفون و آیپد · بدون نصب و بدون اپ‌استور · رایگان</div>
+    <div class="or">گوشی اندروید دارید؟ <a href="BehradCatalog.apk" download="BehradCatalog.apk">دانلود اپ اندروید</a></div>
+  </div>
+  <div class="card android">
     <a class="dl" href="BehradCatalog.apk" download="BehradCatalog.apk">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
       دانلود اپ اندروید
     </a>
     <div class="meta">حجم حدود ۱۰ مگابایت · اندروید ۷ به بالا · رایگان</div>
     <div class="alt">دانلود نشد؟ <a href="https://raw.githubusercontent.com/behradtejarat1403-hash/catalog/main/app/BehradCatalog.apk">لینک دوم دانلود</a></div>
+    <div class="or">آیفون یا کامپیوتر دارید؟ <a href="../web/">نسخه وب را باز کنید</a></div>
   </div>
 
   <h2>در این برنامه</h2>
@@ -66,6 +80,18 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
     <div class="feat"><b>سفارش آنلاین</b>ثبت سفارش و پیشنهاد قیمت از داخل برنامه</div>
   </div>
 
+  <div class="ios">
+  <h2>نصب روی آیفون</h2>
+  <ol>
+    <li><span>این صفحه را در <b>Safari</b> باز کنید (نه داخل روبیکا یا واتساپ).</span></li>
+    <li><span>دکمه «باز کردن نسخه آیفون» را بزنید.</span></li>
+    <li><span>پایین صفحه دکمه اشتراک‌گذاری <svg class="share" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0A3A6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m8 7 4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg> را بزنید.</span></li>
+    <li><span>گزینه <b>Add to Home Screen</b> (افزودن به صفحه اصلی) و بعد <b>Add</b> را بزنید. آیکون بهراد تجارت روی صفحه گوشی می‌آید و مثل برنامه باز می‌شود.</span></li>
+  </ol>
+  <div class="note">نسخه آیفون خودش به‌روز می‌شود و نصب دوباره لازم ندارد. حساب و درخواست‌های شما روی همین گوشی ذخیره می‌شود.</div>
+  </div>
+
+  <div class="android">
   <h2>راهنمای نصب</h2>
   <ol>
     <li>دکمه «دانلود اپ اندروید» را بزنید.</li>
@@ -74,8 +100,13 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:26px}
     <li>دکمه «نصب» را بزنید. برنامه با نام «کاتالوگ بهراد تجارت» روی گوشی شما قرار می‌گیرد.</li>
   </ol>
   <div class="note">اگر قبلاً برنامه را نصب کرده‌اید، نسخه جدید را روی همان نصب کنید؛ حساب و درخواست‌های شما سر جایش می‌ماند.</div>
+  </div>
 
   <footer>بازرگانی بهراد تجارت جاوید گستر</footer>
 </main>
+<script>
+// iPhone / iPad (iPadOS reports a Mac with touch): the iPhone section first
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) document.body.classList.add("is-ios");
+</script>
 </body>
 </html>
