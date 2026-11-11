@@ -12,7 +12,7 @@
   const CFG = window.BEHRAD_WEB || {};
   const TAG = "#BCAT";
   const CHECK_EVERY = 60 * 1000;
-  const K = {cat: "bc_catalog", meta: "bc_meta", acc: "bc_accounts", ses: "bc_session", box: "bc_requests"};
+  const K = {cat: "bc_catalog", meta: "bc_meta", acc: "bc_accounts", ses: "bc_session", box: "bc_requests", exp: "bc_expert"};
   const realFetch = window.fetch.bind(window);
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
@@ -103,6 +103,23 @@
     return {ok: true};
   }
 
+  // ------------------------------------------------------------ sales expert («کد کارشناس», owner 2026-11-11)
+  const experts = () => (store.get(K.cat, null) || {}).experts || {};
+  function expert() {
+    const e = store.get(K.exp, null);
+    if (!e || !e.code) return null;
+    return {code: e.code, name: experts()[e.code] || e.name || ""};
+  }
+  function setExpert(b) {
+    const code = digits(b.code);
+    if (code.length !== 4) return fail("کد کارشناس ۴ رقم است؛ آن را از کارشناس فروش خود بپرسید.");
+    const list = experts();
+    if (!Object.keys(list).length) return fail("فهرست کارشناسان هنوز دریافت نشده است؛ به اینترنت وصل شوید و دوباره امتحان کنید.");
+    if (!list[code]) return fail("این کد کارشناس پیدا نشد. کد را دوباره بررسی کنید یا از کارشناس فروش خود بپرسید.");
+    if (!store.set(K.exp, {code, name: list[code], at: isoNow()})) return fail("مرورگر اجازه ذخیره نمی‌دهد (حالت خصوصی؟)؛ در حالت عادی باز کنید.");
+    return {ok: true, expert: {code, name: list[code]}};
+  }
+
   // ------------------------------------------------------------ requests and Rubika
   const toman = v => { v = Number(v) || 0; return v >= 1e6 ? v : v * 1000; };
   const num = v => toman(v).toLocaleString("en-US").replace(/,/g, "٬");
@@ -110,6 +127,8 @@
     const c = item.customer;
     const head = {register: "🆕 ثبت‌نام همکار جدید", order: "🛒 درخواست سفارش", offer: "💬 پیشنهاد قیمت"}[item.type];
     const lines = [`${head} | کاتالوگ بهراد تجارت`, `👤 ${c.name} — ${c.shop} (${c.city})`, `📱 ${c.mobile}`];
+    const e = item.expert || {};
+    lines.push(e.code ? `🧑‍💼 کارشناس: ${e.name || "—"} (کد ${e.code})` : "🧑‍💼 کارشناس: کد وارد نشده");
     if (item.type !== "register") {
       lines.push(`📦 ${item.title}` + (item.color ? ` | رنگ: ${item.color}` : ""));
       lines.push(`🔢 تعداد: ${item.qty}`);
@@ -132,7 +151,7 @@
   async function add(item, acc) {
     const d = new Date();
     const full = {...item, id: "BC-" + randHex(4).toUpperCase(), at: isoNow(), when: `${jalaliToday()} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
-                  customer: pub(acc), status: "queued"};
+                  customer: pub(acc), expert: expert(), status: "queued"};
     if (full.type === "register") return "local";  // no server and no bot key: the account only lives on this phone
     if (openWhatsApp(full)) { full.status = "sent"; full.sent_at = isoNow(); }
     const box = store.get(K.box, []); box.push(full); store.set(K.box, box);
@@ -168,11 +187,13 @@
     if (path === "/api/refresh") return catalog(true);
     if (path === "/api/account") return json({account: pub(current())});
     if (path === "/api/requests") return json(requests());
+    if (path === "/api/expert" && method !== "POST") return json({expert: expert()});
     if (method === "POST") {
       if (path === "/api/signup") return json(await signup(body));
       if (path === "/api/login") return json(await login(body));
       if (path === "/api/logout") { store.del(K.ses); return json({ok: true}); }
       if (path === "/api/request") return json(await request(body));
+      if (path === "/api/expert") return json(setExpert(body));
     }
     return new Response("", {status: 404});
   };
