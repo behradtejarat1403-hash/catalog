@@ -582,7 +582,7 @@ function showExpert() {
 function openExpert(required, then) {
   const stale = EXPERT && EXPERT.code && needExpert() && !expertOk();
   dlg(`<h2>کد کارشناس</h2>
-    <div class="hint">هر همکار با یک کارشناس فروش بهراد تجارت کار می‌کند. کد ۴ رقمی کارشناس خود را وارد کنید تا سفارش‌ها و پیشنهادهای قیمت شما مستقیم به همان کارشناس برسد. کد را از کارشناس فروش خود بپرسید.</div>
+    <div class="hint">هر همکار با یک کارشناس فروش بهراد تجارت کار می‌کند. کد ۴ رقمی کارشناس خود را وارد کنید تا سفارش‌ها و پیشنهادهای قیمت شما مستقیم به همان کارشناس برسد. کد را از کارشناس فروش خود بپرسید.<br><b>اگر کارشناس ندارید، کد ۰۰۰۰ را وارد کنید</b>؛ درخواست‌های شما به مدیریت فروش می‌رسد.</div>
     ${stale ? `<div class="expnote">کد کارشناس قبلی شما (${fa(EXPERT.code)}) دیگر فعال نیست؛ کد کارشناس فعلی خود را وارد کنید.</div>`
       : EXPERT && EXPERT.code ? `<div class="expnote">کارشناس فعلی شما: ${esc(expertName())} (کد ${fa(EXPERT.code)})</div>` : ""}
     <label>کد کارشناس (۴ رقم)</label><input id="eCode" class="codein" inputmode="numeric" maxlength="4" autocomplete="off" dir="ltr" placeholder="۰۰۰۰">
@@ -591,8 +591,8 @@ function openExpert(required, then) {
   if (required) { $("#dx").remove(); $("#dialog").dataset.locked = "1"; }
   const go = async () => {
     const code = digits($("#eCode").value), err = $("#eErr");
-    if (code.length !== 4) { err.textContent = "کد کارشناس ۴ رقم است؛ آن را از کارشناس فروش خود بپرسید."; return; }
-    if (needExpert() && !expertsOf()[code]) { err.textContent = "این کد کارشناس پیدا نشد. کد را دوباره بررسی کنید یا از کارشناس فروش خود بپرسید."; return; }
+    if (code.length !== 4) { err.textContent = "کد کارشناس ۴ رقم است؛ آن را از کارشناس فروش خود بپرسید. اگر کارشناس ندارید ۰۰۰۰ را وارد کنید."; return; }
+    if (needExpert() && !expertsOf()[code]) { err.textContent = "این کد کارشناس پیدا نشد. کد را دوباره بررسی کنید یا از کارشناس فروش خود بپرسید؛ اگر کارشناس ندارید ۰۰۰۰ را وارد کنید."; return; }
     $("#eGo").disabled = true;
     let r;
     try { r = await api("/api/expert", {code}); } catch (e) { r = {ok: false, error: "ثبت نشد؛ دوباره امتحان کنید."}; }

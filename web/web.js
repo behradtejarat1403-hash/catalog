@@ -112,10 +112,10 @@
   }
   function setExpert(b) {
     const code = digits(b.code);
-    if (code.length !== 4) return fail("کد کارشناس ۴ رقم است؛ آن را از کارشناس فروش خود بپرسید.");
+    if (code.length !== 4) return fail("کد کارشناس ۴ رقم است؛ آن را از کارشناس فروش خود بپرسید. اگر کارشناس ندارید ۰۰۰۰ را وارد کنید.");
     const list = experts();
     if (!Object.keys(list).length) return fail("فهرست کارشناسان هنوز دریافت نشده است؛ به اینترنت وصل شوید و دوباره امتحان کنید.");
-    if (!list[code]) return fail("این کد کارشناس پیدا نشد. کد را دوباره بررسی کنید یا از کارشناس فروش خود بپرسید.");
+    if (!list[code]) return fail("این کد کارشناس پیدا نشد. کد را دوباره بررسی کنید یا از کارشناس فروش خود بپرسید؛ اگر کارشناس ندارید ۰۰۰۰ را وارد کنید.");
     if (!store.set(K.exp, {code, name: list[code], at: isoNow()})) return fail("مرورگر اجازه ذخیره نمی‌دهد (حالت خصوصی؟)؛ در حالت عادی باز کنید.");
     return {ok: true, expert: {code, name: list[code]}};
   }
