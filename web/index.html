@@ -78,7 +78,7 @@ main{flex:1;min-width:0}
 .ph b{font-size:22px;font-weight:800;display:block}
 .ph span{font-size:12px;color:var(--muted)}
 .badge{position:absolute;top:10px;left:10px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px}
-.b-ok{background:var(--ok-bg);color:var(--ok)}.b-out{background:var(--out-bg);color:var(--out)}.b-ask{background:var(--ask-bg);color:var(--ask)}
+.b-ok{background:var(--ok-bg);color:var(--ok)}.b-out{background:var(--out-bg);color:var(--out)}.b-ask{background:var(--ask-bg);color:var(--ask)}.b-lim{background:#FFE8D2;color:#B54708}
 .info{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
 .info .brand{font-size:12px;color:var(--muted)}
 .info .title{font-weight:700;line-height:1.6;min-height:2.8em}
@@ -87,6 +87,7 @@ main{flex:1;min-width:0}
 .info .price small{color:var(--muted);font-size:11px}
 .info .price.na{color:var(--out);font-weight:700}
 .info .price.askp{color:var(--ask);font-weight:700}
+.info .price.limp{color:#B54708;font-weight:700}
 .dots{display:flex;gap:4px;flex-wrap:wrap}
 .dots span{font-size:11px;padding:1px 7px;border-radius:6px;background:var(--navy-soft);color:var(--navy-2)}
 .dots span.x{background:#F1F1F1;color:#999;text-decoration:line-through}
@@ -322,10 +323,13 @@ function groupOf(p) {
 }
 function stateOf(p) {
   if (p.colors.some(c => c.status === "ok")) return "ok";
+  if (p.colors.some(c => c.limited)) return "lim";
   if (p.colors.some(c => c.status === "ask")) return "ask";
   return "out";
 }
-const STATE = {ok: ["موجود", "b-ok"], out: ["ناموجود", "b-out"], ask: ["استعلام", "b-ask"]};
+/* «تعداد محدود» (2026-11-14): catalog.json keeps status "ask" for it, with limited:true, so older installed apps still work */
+const STATE = {ok: ["موجود", "b-ok"], out: ["ناموجود", "b-out"], ask: ["استعلام", "b-ask"], lim: ["تعداد محدود", "b-lim"]};
+const stOf = c => c.limited ? "lim" : c.status;
 function minPrice(p) {
   const v = p.colors.filter(c => c.status === "ok").map(c => c.price);
   return v.length ? Math.min(...v) : null;
@@ -351,7 +355,7 @@ function filtered() {
     if (VIEW.group === "__sale") { if (!p._sale) return false; }
     else if (VIEW.group && p.group !== VIEW.group) return false;
     if (VIEW.brand && p.brand !== VIEW.brand) return false;
-    if (VIEW.instock && p._state !== "ok") return false;
+    if (VIEW.instock && p._state !== "ok" && p._state !== "lim") return false;
     if (q && !p._search.includes(q)) {
       // چند کلمه: همه باید باشند
       const parts = VIEW.q.trim().split(/\s+/).map(norm).filter(Boolean);
@@ -391,7 +395,7 @@ function render() {
     const sc = p.colors.filter(c => c.sale).sort((a, b) => a.sale - b.sale)[0];
     const price = sc ? `<div class="price sale">${sc.list ? `<s>${money(sc.list)}</s>` : ""}<b>${money(sc.sale)}</b><small>${esc(DATA.unit)}</small></div>`
       : mp != null ? `<div class="price">${many ? "<small>از</small>" : ""}<b>${money(mp)}</b><small>${esc(DATA.unit)}</small></div>`
-      : `<div class="price ${p._state === "out" ? "na" : "askp"}">${p._state === "out" ? "ناموجود" : "قیمت: استعلام بگیرید"}</div>`;
+      : `<div class="price ${p._state === "out" ? "na" : p._state === "lim" ? "limp" : "askp"}">${p._state === "out" ? "ناموجود" : p._state === "lim" ? "تعداد محدود" : "قیمت: استعلام بگیرید"}</div>`;
     const dots = p.colors.filter(c => c.name).map(c => `<span class="${c.status === "out" ? "x" : ""}">${esc(c.name)}</span>`).join("");
     return `<div class="card" data-id="${p.id}">
       <div class="pic">${p.image ? `<img loading="lazy" src="${imgUrl(p)}" alt="">` : placeholder(p)}<span class="badge ${cls}">${label}</span>${p._sale ? `<span class="badge b-sale">فروش ویژه</span>` : ""}</div>
@@ -404,7 +408,7 @@ function openProduct(id) {
   const p = DATA.products.find(x => x.id === id);
   if (!p) return;
   const colors = p.colors.map(c => {
-    const [label, cls] = STATE[c.status];
+    const [label, cls] = STATE[stOf(c)];
     const right = c.sale ? `<span class="p red">${c.list ? `<s>${money(c.list)}</s> ` : ""}${money(c.sale)} <small>${esc(DATA.unit)}</small></span>`
       : c.status === "ok" ? `<span class="p">${money(c.price)} <small>${esc(DATA.unit)}</small></span>` : `<span class="tag ${cls}">${label}</span>`;
     const tag = c.sale ? ` <span class="tag" style="background:var(--sale);color:#fff">فروش ویژه</span>` : c.status === "ok" ? ` <span class="tag b-ok">موجود</span>` : "";
@@ -503,8 +507,8 @@ async function makeCard(p) {
         ctx.beginPath(); ctx.moveTo(x - 2, mid + 2); ctx.lineTo(x + ow + 2, mid + 2); ctx.stroke();
       }
     } else {
-      const [label] = STATE[c.status];
-      ctx.font = "800 32px Vazirmatn"; ctx.fillStyle = c.status === "out" ? "#C62828" : "#946200"; ctx.fillText(label, 90, mid);
+      const [label] = STATE[stOf(c)];
+      ctx.font = "800 32px Vazirmatn"; ctx.fillStyle = c.status === "out" ? "#C62828" : c.limited ? "#B54708" : "#946200"; ctx.fillText(label, 90, mid);
     }
   });
   // footer
@@ -668,7 +672,7 @@ function openRequest(p, type) {
   const showList = () => {
     const c = colors[$("#rColor").value], v = priceOf(c), ph = photoOf(p, c);
     if (ph) { $("#rImg").src = ph.url; $("#rImg").style.display = ""; }
-    $("#rList").textContent = v ? `قیمت ${c.sale ? "فروش ویژه" : "لیست"} امروز: ${money(v)} ${DATA.unit}` : (c.status === "out" ? "این رنگ امروز ناموجود است؛ درخواست شما ثبت و پیگیری می‌شود." : "قیمت این کالا استعلامی است.");
+    $("#rList").textContent = v ? `قیمت ${c.sale ? "فروش ویژه" : "لیست"} امروز: ${money(v)} ${DATA.unit}` : (c.status === "out" ? "این رنگ امروز ناموجود است؛ درخواست شما ثبت و پیگیری می‌شود." : c.limited ? "این رنگ تعداد محدود دارد؛ برای قیمت و موجودی درخواست بدهید." : "قیمت این کالا استعلامی است.");
   };
   $("#rColor").onchange = showList; showList();
   $("#rGo").onclick = async () => {
@@ -821,7 +825,7 @@ function prepare(d) {
     p._sale = p.colors.some(c => c.sale);
     p._search = norm([p.title, p.brand, p.model, p.category, p.group, ...p.colors.map(c => c.name)].join(" "));
   });
-  const order = {ok: 0, ask: 1, out: 2};
+  const order = {ok: 0, lim: 1, ask: 2, out: 3};
   d.products.sort((a, b) => (b._sale - a._sale) || (order[a._state] - order[b._state]));
   return d;
 }
